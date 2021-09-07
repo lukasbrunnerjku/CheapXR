@@ -3,7 +3,7 @@ import mediapipe as mp
 import time
 
 
-class BodyDetector():
+class BodyDetector:
     # https://google.github.io/mediapipe/solutions/pose.html
 
     def __init__(self):
@@ -18,6 +18,25 @@ class BodyDetector():
             min_detection_confidence=0.5,
             min_tracking_confidence=0.5,
         )
+
+    def findPose3D(self, img, draw=True):
+
+        img = cv2.flip(img, 1)
+        imgRGB = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        imgRGB.flags.writeable = False
+        self.results = self.pose.process(imgRGB)
+
+        if self.results.pose_landmarks:
+            if draw:
+                self.mpDraw.plot_landmarks(
+                    self.results.pose_world_landmarks, 
+                    self.mpPose.POSE_CONNECTIONS
+                )
+
+            return self.results.pose_world_landmarks.landmark
+        
+        else:
+            return None
 
     def findPose(self, img, draw=True):
 
@@ -44,7 +63,7 @@ class BodyDetector():
         return self.lmList
 
 
-def main():
+def main(switch: bool = False):
 
     pTime = 0
     cTime = 0
@@ -57,12 +76,16 @@ def main():
         if not success:
             continue
 
-        img = detector.findPose(img)
+        if switch:
+            _ = detector.findPose3D(img)
 
-        lmList = detector.findPosition(img)
+        else:
+            img = detector.findPose(img)
 
-        if len(lmList) != 0:
-            print(lmList[14])
+            lmList = detector.findPosition(img)
+
+            if len(lmList) != 0:
+                print(lmList[14])
 
         cTime = time.time()
         fps = 1 / (cTime - pTime)
@@ -79,4 +102,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    main(switch=False)
