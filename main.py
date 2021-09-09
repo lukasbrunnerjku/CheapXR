@@ -75,7 +75,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--indices', default='', help=text)
     args = parser.parse_args()
-    args.indices = list(map(int, args.indices.split(' ')))
+    if len(args.indices) > 0:
+        args.indices = list(map(int, args.indices.split(' ')))
 
     context = zmq.Context()
     socket = context.socket(zmq.REP)
