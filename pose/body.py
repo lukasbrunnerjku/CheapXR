@@ -1,6 +1,7 @@
 import cv2
 import mediapipe as mp
-import time
+from typing import Tuple
+import numpy as np
 
 
 class BodyDetector:
@@ -19,87 +20,41 @@ class BodyDetector:
             min_tracking_confidence=0.5,
         )
 
-    def findPose3D(self, img, draw=True):
+    def __call__(self, img, flip=True) -> Tuple[bool, np.ndarray]:
 
-        img = cv2.flip(img, 1)
+        if flip:
+            img = cv2.flip(img, 1)
+            
         imgRGB = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         imgRGB.flags.writeable = False
         self.results = self.pose.process(imgRGB)
+        success = self.results.pose_landmarks is not None
+        return success, img
 
-        if self.results.pose_landmarks:
-            if draw:
-                self.mpDraw.plot_landmarks(
-                    self.results.pose_world_landmarks, 
-                    self.mpPose.POSE_CONNECTIONS
-                )
+    def findPose3D(self, draw=True, parse=True):
 
-            return self.results.pose_world_landmarks.landmark
-        
-        else:
-            return None
+        if draw:
+            self.mpDraw.plot_landmarks(
+                self.results.pose_world_landmarks, 
+                self.mpPose.POSE_CONNECTIONS
+            )
 
-    def findPose(self, img, draw=True):
+        if parse:
+            keypoints = self.results.pose_world_landmarks.landmark
+            return [[kp.x, kp.y, kp.z] for kp in keypoints]
 
-        img = cv2.flip(img, 1)
-        imgRGB = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        imgRGB.flags.writeable = False
-        self.results = self.pose.process(imgRGB)
+    def findPose2D(self, img, draw=True, parse=True):
 
-        if self.results.pose_landmarks:
-            if draw:
-                self.mpDraw.draw_landmarks(img, self.results.pose_landmarks,
-                                           self.mpPose.POSE_CONNECTIONS)
-        return img
+        if draw:
+            self.mpDraw.draw_landmarks(img, self.results.pose_landmarks,
+                                        self.mpPose.POSE_CONNECTIONS)
 
-    def findPosition(self, img):
-
-        self.lmList = []
-        if self.results.pose_landmarks:
-            for id, lm in enumerate(self.results.pose_landmarks.landmark):
+        if parse:
+            self.lmList = []
+            
+            for lm in self.results.pose_landmarks.landmark:
                 h, w, _ = img.shape
-                cx, cy = int(lm.x * w), int(lm.y * h)
-                self.lmList.append([id, cx, cy])
-               
-        return self.lmList
+                x, y = int(lm.x * w), int(lm.y * h)
+                self.lmList.append([x, y])
+            return self.lmList
 
-
-def main(switch: bool = False):
-
-    pTime = 0
-    cTime = 0
-    cap = cv2.VideoCapture(0)
-    detector = BodyDetector()
-
-    while cap.isOpened():
-        success, img = cap.read()
-
-        if not success:
-            continue
-
-        if switch:
-            _ = detector.findPose3D(img)
-
-        else:
-            img = detector.findPose(img)
-
-            lmList = detector.findPosition(img)
-
-            if len(lmList) != 0:
-                print(lmList[14])
-
-        cTime = time.time()
-        fps = 1 / (cTime - pTime)
-        pTime = cTime
-
-        cv2.putText(img, str(int(fps)), (10, 70), cv2.FONT_HERSHEY_PLAIN, 3,
-                    (255, 0, 255), 3)
-
-        cv2.imshow("", img)
-        if cv2.waitKey(5) & 0xFF == 27:
-            break
-    
-    cap.release()
-
-
-if __name__ == "__main__":
-    main(switch=False)
