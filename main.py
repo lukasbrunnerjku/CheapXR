@@ -68,6 +68,7 @@ for line in text.split('\n'):
         num, desc = line.split(' - ')
         table[int(num)] = desc
 
+
 if __name__ == '__main__':
 
     import argparse
@@ -99,8 +100,10 @@ if __name__ == '__main__':
             if success:
                 success, img = detector(img, flip=False)
 
-        keypoints = detector.findPose3D(draw=False, parse=True)
-        socket.send_pyobj(keypoints)
+        socket.send_pyobj(img)
+
+        # keypoints = detector.findPose3D(draw=False, parse=True)
+        # socket.send_pyobj(keypoints)
 
         cTime = time.time()
         fps = 1 / (cTime - pTime)
